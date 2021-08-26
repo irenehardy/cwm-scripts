@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
-import { 
+import {
   ButtonGroup,
   Button,
   Card,
   Stack,
   Heading,
-  TextStyle 
+  TextStyle
 } from '@shopify/polaris';
 
 export default class ScriptSelector extends Component {
