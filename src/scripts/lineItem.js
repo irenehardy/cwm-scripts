@@ -287,8 +287,8 @@ class CustomBundleDiscount < Campaign
     end
 
     bundle_count = total_quantity / bundle_products_count
-
-    @amount = total_cost - @bundle_price * bundle_count
+    @total_final_price = @bundle_price * bundle_count
+    @amount = ((total_cost.cents - @bundle_price.cents * bundle_count) / total_cost.cents * 100)
   end
 
   def run(cart)
@@ -297,7 +297,9 @@ class CustomBundleDiscount < Campaign
 
     if check_bundles(cart)
       calc_discount()
-      @bundle_items.each { |item| @discount.apply(item, @amount) }
+      @bundle_items.each_with_index do | item, index |
+        @discount.apply(item, @amount, @total_final_price, @bundle_items.length, index)
+      end
     end
     @bundle_items.reverse.each { |item| cart.line_items.prepend(item) }
   end
@@ -469,6 +471,26 @@ class DiscountCodePatternMatch < Campaign
       next unless @line_item_selector.nil? || @line_item_selector.match?(item)
       @discount.apply(item)
     end
+  end
+end`,
+
+  DynamicPercentageDiscount: `
+class DynamicPercentageDiscount
+  def initialize(message)
+    @message = message
+    @total_new_price = Decimal.new(0)
+  end
+
+  def apply(line_item, amount, bundle_price, length, index)
+    @amount = amount
+    @discount = (Decimal.new(100) - @amount) / 100
+    if index < (length - 1)
+      line_item.change_line_price(line_item.line_price * @discount, message: @message)
+    elsif index = (length - 1)
+      line_item.change_line_price(bundle_price - Money.new(cents: @total_new_price), message: @message)
+    end
+    @updated_line_price = line_item.line_price.cents.round(2)
+    @total_new_price =  @total_new_price + @updated_line_price
   end
 end`,
 
@@ -961,6 +983,17 @@ const DISCOUNTS = [{
             label: "Split discount between items"
           }
         ]
+      }
+    }
+  },
+  {
+    value: "DynamicPercentageDiscount",
+    label: "Dynamic Percentage Discount",
+    description: "Offers items for fixed price selected above, ONLY VALID for Custom Bundle",
+    inputs: {
+      message: {
+        type: "text",
+        description: "Message to display to customer"
       }
     }
   },

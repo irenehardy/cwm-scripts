@@ -93,8 +93,8 @@ class CustomBundleDiscount < Campaign
     end
 
     bundle_count = total_quantity / bundle_products_count
-
-    @amount = total_cost - @bundle_price * bundle_count
+    @total_final_price = @bundle_price * bundle_count
+    @amount = ((total_cost.cents - @bundle_price.cents * bundle_count) / total_cost.cents * 100)
   end
 
   def run(cart)
@@ -103,7 +103,9 @@ class CustomBundleDiscount < Campaign
 
     if check_bundles(cart)
       calc_discount()
-      @bundle_items.each { |item| @discount.apply(item, @amount) }
+      @bundle_items.each_with_index do | item, index |
+        @discount.apply(item, @amount, @total_final_price, @bundle_items.length, index)
+      end
     end
     @bundle_items.reverse.each { |item| cart.line_items.prepend(item) }
   end
