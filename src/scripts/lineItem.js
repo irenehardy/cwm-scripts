@@ -3,33 +3,38 @@ import Common from './common';
 const classes = {
   BundleDiscount: `
 class BundleDiscount < Campaign
-  def initialize(condition, customer_qualifier, cart_qualifier, discount, full_bundles_only, bundle_products)
+  def initialize(condition, customer_qualifier, cart_qualifier, discount, full_bundles_only, bundle_line_property, bundle_products)
     super(condition, customer_qualifier, cart_qualifier, nil)
     @bundle_products = bundle_products
     @discount = discount
     @full_bundles_only = full_bundles_only
     @split_items = []
     @bundle_items = []
+    @bundle_line_property = bundle_line_property
   end
 
   def check_bundles(cart)
+      sorted_items = cart.line_items.sort_by{|line_item| line_item.variant.price}.reverse
+      unless @bundle_line_property.empty? || @bundle_line_property.nil?
+        sorted_items = sorted_items.select { |item| item.properties['_bundle_source'] == @bundle_line_property }
+      end
       bundled_items = @bundle_products.map do |bitem|
         quantity_required = bitem[:quantity].to_i
         qualifiers = bitem[:qualifiers]
         type = bitem[:type].to_sym
         case type
           when :ptype
-            items = cart.line_items.select { |item| qualifiers.include?(item.variant.product.product_type) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.product_type) && !item.discounted? }
           when :ptag
-            items = cart.line_items.select { |item| (qualifiers & item.variant.product.tags).length > 0 && !item.discounted? }
+            items = sorted_items.select { |item| (qualifiers & item.variant.product.tags).length > 0 && !item.discounted? }
           when :pid
             qualifiers.map!(&:to_i)
-            items = cart.line_items.select { |item| qualifiers.include?(item.variant.product.id) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.id) && !item.discounted? }
           when :vid
             qualifiers.map!(&:to_i)
-            items = cart.line_items.select { |item| qualifiers.include?(item.variant.id) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.id) && !item.discounted? }
           when :vsku
-            items = cart.line_items.select { |item| (qualifiers & item.variant.skus).length > 0 && !item.discounted? }
+            items = sorted_items.select { |item| (qualifiers & item.variant.skus).length > 0 && !item.discounted? }
         end
 
         total_quantity = items.reduce(0) { |total, item| total + item.quantity }
@@ -193,18 +198,22 @@ end`,
 
   CustomBundleDiscount: `
 class CustomBundleDiscount < Campaign
-  def initialize(condition, customer_qualifier, cart_qualifier, discount, full_bundles_only, bundle_price, bundle_products)
+  def initialize(condition, customer_qualifier, cart_qualifier, discount, bundle_line_property, bundle_price, bundle_products)
     super(condition, customer_qualifier, cart_qualifier, nil)
     @bundle_products = bundle_products
     @discount = discount
-    @full_bundles_only = full_bundles_only
+    @full_bundles_only = true
     @bundle_price = Money.new(cents: bundle_price * 100)
     @split_items = []
     @bundle_items = []
+    @bundle_line_property = bundle_line_property
   end
 
   def check_bundles(cart)
       sorted_items = cart.line_items.sort_by{|line_item| line_item.variant.price}.reverse
+      unless @bundle_line_property.empty? || @bundle_line_property.nil?
+        sorted_items = sorted_items.select { |item| item.properties['_bundle_source'] == @bundle_line_property }
+      end
       bundled_items = @bundle_products.map do |bitem|
         quantity_required = bitem[:quantity].to_i
         qualifiers = bitem[:qualifiers]
@@ -1432,6 +1441,10 @@ const campaigns = [{
         type: "boolean",
         description: "When unchecked, all quantities for each matching item will be discounted if a full bundle is made"
       },
+      bundle_line_property: {
+        type: "text",
+        description: "Optional property to check against line items - usually handle"
+      },
       bundle_items: {
         type: "objectArray",
         description: "Set the products that are part of a bundle",
@@ -1461,9 +1474,9 @@ const campaigns = [{
       customer_qualifier: [...CUSTOMER_QUALIFIERS, CUSTOMER_AND_SELECTOR, CUSTOMER_OR_SELECTOR],
       cart_qualifier: [...CART_QUALIFIERS, CART_AND_SELECTOR, CART_OR_SELECTOR],
       discount_to_apply: [...DISCOUNTS],
-      full_bundle_only: {
-        type: "boolean",
-        description: "When unchecked, all quantities for each matching item will be discounted if a full bundle is made"
+      bundle_line_property: {
+        type: "text",
+        description: "Optional property to check against line items - usually handle"
       },
       bundle_price: {
         type: "number",

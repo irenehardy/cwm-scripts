@@ -1,31 +1,36 @@
 class BundleDiscount < Campaign
-  def initialize(condition, customer_qualifier, cart_qualifier, discount, full_bundles_only, bundle_products)
+  def initialize(condition, customer_qualifier, cart_qualifier, discount, full_bundles_only, bundle_line_property, bundle_products)
     super(condition, customer_qualifier, cart_qualifier, nil)
     @bundle_products = bundle_products
     @discount = discount
     @full_bundles_only = full_bundles_only
     @split_items = []
     @bundle_items = []
+    @bundle_line_property = bundle_line_property
   end
 
   def check_bundles(cart)
+      sorted_items = cart.line_items.sort_by{|line_item| line_item.variant.price}.reverse
+      unless @bundle_line_property.empty? || @bundle_line_property.nil?
+        sorted_items = sorted_items.select { |item| item.properties['_bundle_source'] == @bundle_line_property }
+      end
       bundled_items = @bundle_products.map do |bitem|
         quantity_required = bitem[:quantity].to_i
         qualifiers = bitem[:qualifiers]
         type = bitem[:type].to_sym
         case type
           when :ptype
-            items = cart.line_items.select { |item| qualifiers.include?(item.variant.product.product_type) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.product_type) && !item.discounted? }
           when :ptag
-            items = cart.line_items.select { |item| (qualifiers & item.variant.product.tags).length > 0 && !item.discounted? }
+            items = sorted_items.select { |item| (qualifiers & item.variant.product.tags).length > 0 && !item.discounted? }
           when :pid
             qualifiers.map!(&:to_i)
-            items = cart.line_items.select { |item| qualifiers.include?(item.variant.product.id) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.id) && !item.discounted? }
           when :vid
             qualifiers.map!(&:to_i)
-            items = cart.line_items.select { |item| qualifiers.include?(item.variant.id) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.id) && !item.discounted? }
           when :vsku
-            items = cart.line_items.select { |item| (qualifiers & item.variant.skus).length > 0 && !item.discounted? }
+            items = sorted_items.select { |item| (qualifiers & item.variant.skus).length > 0 && !item.discounted? }
         end
 
         total_quantity = items.reduce(0) { |total, item| total + item.quantity }

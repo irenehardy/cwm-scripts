@@ -1,16 +1,20 @@
 class CustomBundleDiscount < Campaign
-  def initialize(condition, customer_qualifier, cart_qualifier, discount, full_bundles_only, bundle_price, bundle_products)
+  def initialize(condition, customer_qualifier, cart_qualifier, discount, bundle_line_property, bundle_price, bundle_products)
     super(condition, customer_qualifier, cart_qualifier, nil)
     @bundle_products = bundle_products
     @discount = discount
-    @full_bundles_only = full_bundles_only
+    @full_bundles_only = true
     @bundle_price = Money.new(cents: bundle_price * 100)
     @split_items = []
     @bundle_items = []
+    @bundle_line_property = bundle_line_property
   end
 
   def check_bundles(cart)
       sorted_items = cart.line_items.sort_by{|line_item| line_item.variant.price}.reverse
+      unless @bundle_line_property.empty? || @bundle_line_property.nil?
+        sorted_items = sorted_items.select { |item| item.properties['_bundle_source'] == @bundle_line_property }
+      end
       bundled_items = @bundle_products.map do |bitem|
         quantity_required = bitem[:quantity].to_i
         qualifiers = bitem[:qualifiers]
