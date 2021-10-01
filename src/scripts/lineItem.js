@@ -14,7 +14,7 @@ class BundleDiscount < Campaign
   end
 
   def check_bundles(cart)
-      sorted_items = cart.line_items.sort_by{|line_item| line_item.variant.price}.reverse
+      sorted_items = cart.line_items.select{ |item| !item.discounted? }.sort_by{|line_item| line_item.variant.price}.reverse
       unless @bundle_line_property.empty? || @bundle_line_property.nil?
         sorted_items = sorted_items.select { |item| item.properties['_bundle_source'] == @bundle_line_property }
       end
@@ -24,17 +24,17 @@ class BundleDiscount < Campaign
         type = bitem[:type].to_sym
         case type
           when :ptype
-            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.product_type) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.product_type) }
           when :ptag
-            items = sorted_items.select { |item| (qualifiers & item.variant.product.tags).length > 0 && !item.discounted? }
+            items = sorted_items.select { |item| (qualifiers & item.variant.product.tags).length > 0 }
           when :pid
             qualifiers.map!(&:to_i)
-            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.id) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.id) }
           when :vid
             qualifiers.map!(&:to_i)
-            items = sorted_items.select { |item| qualifiers.include?(item.variant.id) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.id) }
           when :vsku
-            items = sorted_items.select { |item| (qualifiers & item.variant.skus).length > 0 && !item.discounted? }
+            items = sorted_items.select { |item| (qualifiers & item.variant.skus).length > 0 }
         end
 
         total_quantity = items.reduce(0) { |total, item| total + item.quantity }
@@ -210,7 +210,7 @@ class CustomBundleDiscount < Campaign
   end
 
   def check_bundles(cart)
-      sorted_items = cart.line_items.sort_by{|line_item| line_item.variant.price}.reverse
+      sorted_items = cart.line_items.select{ |item| !item.discounted? }.sort_by{|line_item| line_item.variant.price}.reverse
       unless @bundle_line_property.empty? || @bundle_line_property.nil?
         sorted_items = sorted_items.select { |item| item.properties['_bundle_source'] == @bundle_line_property }
       end
@@ -220,17 +220,17 @@ class CustomBundleDiscount < Campaign
         type = bitem[:type].to_sym
         case type
           when :ptype
-            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.product_type) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.product_type) }
           when :ptag
-            items = sorted_items.select { |item| (qualifiers & item.variant.product.tags).length > 0 && !item.discounted? }
+            items = sorted_items.select { |item| (qualifiers & item.variant.product.tags).length > 0 }
           when :pid
             qualifiers.map!(&:to_i)
-            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.id) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.product.id) }
           when :vid
             qualifiers.map!(&:to_i)
-            items = sorted_items.select { |item| qualifiers.include?(item.variant.id) && !item.discounted? }
+            items = sorted_items.select { |item| qualifiers.include?(item.variant.id) }
           when :vsku
-            items = sorted_items.select { |item| (qualifiers & item.variant.skus).length > 0 && !item.discounted? }
+            items = sorted_items.select { |item| (qualifiers & item.variant.skus).length > 0 }
         end
 
         total_quantity = items.reduce(0) { |total, item| total + item.quantity }
