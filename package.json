@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Shopify Script Creator",
   "main": "index.js",
+  "homepage": "https://irenehardy.github.io/cwm-scripts",
   "scripts": {
     "start": "webpack-dev-server",
     "prebuild": "rimraf ./docs",
@@ -11,7 +12,7 @@
     "build:scripts": "node ruby-to-js",
     "check:scripts": "node ruby-to-js --check",
     "predeploy": "node ruby-to-js --check && yarn run build",
-    "deploy": "git add ./docs && git commit -m 'Release new version' && git push",
+    "deploy": "git add ./docs && git commit -m 'Release new version' && git push && gh-pages -d build",
     "test:ruby": "bundle exec rspec"
   },
   "dependencies": {
