@@ -4,7 +4,6 @@
   "version": "1.0.0",
   "description": "Shopify Script Creator",
   "main": "index.js",
-  "homepage": "https://irenehardy.github.io/cwm-scripts",
   "scripts": {
     "start": "webpack-dev-server",
     "prebuild": "rimraf ./docs",
